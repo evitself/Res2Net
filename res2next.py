@@ -11,10 +11,11 @@ model_urls = {
     'res2next50': 'http://mc.nankai.edu.cn/projects/res2net/pretrainmodels/res2next50_4s-6ef7e7bf.pth',
 }
 
+
 class Bottle2neckX(nn.Module):
     expansion = 4
 
-    def __init__(self, inplanes, planes, baseWidth, cardinality, stride=1, downsample=None, scale = 4, stype='normal'):
+    def __init__(self, inplanes, planes, baseWidth, cardinality, stride=1, downsample=None, scale=4, stype='normal'):
         """ Constructor
         Args:
             inplanes: input channel dimensionality
@@ -27,32 +28,32 @@ class Bottle2neckX(nn.Module):
         """
         super(Bottle2neckX, self).__init__()
 
-        D = int(math.floor(planes * (baseWidth/64.0)))
+        D = int(math.floor(planes * (baseWidth / 64.0)))
         C = cardinality
 
-        self.conv1 = nn.Conv2d(inplanes, D*C*scale, kernel_size=1, stride=1, padding=0, bias=False)
-        self.bn1 = nn.BatchNorm2d(D*C*scale)
+        self.conv1 = nn.Conv2d(inplanes, D * C * scale, kernel_size=1, stride=1, padding=0, bias=False)
+        self.bn1 = nn.BatchNorm2d(D * C * scale)
 
         if scale == 1:
-          self.nums = 1
+            self.nums = 1
         else:
-          self.nums = scale -1
+            self.nums = scale - 1
         if stype == 'stage':
-            self.pool = nn.AvgPool2d(kernel_size=3, stride = stride, padding=1)
+            self.pool = nn.AvgPool2d(kernel_size=3, stride=stride, padding=1)
         convs = []
         bns = []
         for i in range(self.nums):
-          convs.append(nn.Conv2d(D*C, D*C, kernel_size=3, stride = stride, padding=1, groups=C, bias=False))
-          bns.append(nn.BatchNorm2d(D*C))
+            convs.append(nn.Conv2d(D * C, D * C, kernel_size=3, stride=stride, padding=1, groups=C, bias=False))
+            bns.append(nn.BatchNorm2d(D * C))
         self.convs = nn.ModuleList(convs)
         self.bns = nn.ModuleList(bns)
 
-        self.conv3 = nn.Conv2d(D*C*scale, planes * 4, kernel_size=1, stride=1, padding=0, bias=False)
+        self.conv3 = nn.Conv2d(D * C * scale, planes * 4, kernel_size=1, stride=1, padding=0, bias=False)
         self.bn3 = nn.BatchNorm2d(planes * 4)
         self.relu = nn.ReLU(inplace=True)
 
         self.downsample = downsample
-        self.width  = D*C
+        self.width = D * C
         self.stype = stype
         self.scale = scale
 
@@ -65,20 +66,20 @@ class Bottle2neckX(nn.Module):
 
         spx = torch.split(out, self.width, 1)
         for i in range(self.nums):
-          if i==0 or self.stype=='stage':
-            sp = spx[i]
-          else:
-            sp = sp + spx[i]
-          sp = self.convs[i](sp)
-          sp = self.relu(self.bns[i](sp))
-          if i==0:
-            out = sp
-          else:
-            out = torch.cat((out, sp), 1)
-        if self.scale != 1 and self.stype=='normal':
-          out = torch.cat((out, spx[self.nums]),1)
-        elif self.scale != 1 and self.stype=='stage':
-          out = torch.cat((out, self.pool(spx[self.nums])),1)
+            if i == 0 or self.stype == 'stage':
+                sp = spx[i]
+            else:
+                sp = sp + spx[i]
+            sp = self.convs[i](sp)
+            sp = self.relu(self.bns[i](sp))
+            if i == 0:
+                out = sp
+            else:
+                out = torch.cat((out, sp), 1)
+        if self.scale != 1 and self.stype == 'normal':
+            out = torch.cat((out, spx[self.nums]), 1)
+        elif self.scale != 1 and self.stype == 'stage':
+            out = torch.cat((out, self.pool(spx[self.nums])), 1)
 
         out = self.conv3(out)
         out = self.bn3(out)
@@ -119,7 +120,7 @@ class Res2NeXt(nn.Module):
         self.layer2 = self._make_layer(block, 128, layers[1], 2)
         self.layer3 = self._make_layer(block, 256, layers[2], 2)
         self.layer4 = self._make_layer(block, 512, layers[3], 2)
-        self.avgpool = nn.AvgPool2d(7)      
+        self.avgpool = nn.AvgPool2d(7)
         self.fc = nn.Linear(512 * block.expansion, num_classes)
 
         for m in self.modules():
@@ -161,16 +162,19 @@ class Res2NeXt(nn.Module):
         x = self.fc(x)
 
         return x
+
+
 def res2next50(pretrained=False, **kwargs):
     """    Construct Res2NeXt-50.
     The default scale is 4.
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = Res2NeXt(Bottle2neckX, layers = [3, 4, 6, 3], baseWidth = 4, cardinality=8, scale = 4, num_classes=1000)
+    model = Res2NeXt(Bottle2neckX, layers=[3, 4, 6, 3], baseWidth=4, cardinality=8, scale=4, num_classes=1000)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['res2next50']))
     return model
+
 
 if __name__ == '__main__':
     images = torch.rand(1, 3, 224, 224).cuda(0)
