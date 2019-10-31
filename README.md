@@ -1,4 +1,5 @@
-# Res2Net
+# Res2Net Keras - Converted from original pytorch model
+
 The official pytorch implemention of the paper ["Res2Net: A New Multi-scale Backbone Architecture"](https://arxiv.org/pdf/1904.01169.pdf)
 
 Our paper is accepted by **IEEE Transactions on Pattern Analysis and Machine Intelligence (TPAMI)**.

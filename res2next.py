@@ -94,7 +94,7 @@ class Bottle2neckX(nn.Module):
 
 
 class Res2NeXt(nn.Module):
-    def __init__(self, block, baseWidth, cardinality, layers, num_classes, scale=4):
+    def __init__(self, block, baseWidth, cardinality, layers, num_classes, scale=4, **kwargs):
         """ Constructor
         Args:
             baseWidth: baseWidth for ResNeXt.
@@ -105,6 +105,7 @@ class Res2NeXt(nn.Module):
         """
         super(Res2NeXt, self).__init__()
 
+        self.include_top = kwargs.get('include_top', True)
         self.cardinality = cardinality
         self.baseWidth = baseWidth
         self.num_classes = num_classes
@@ -157,10 +158,10 @@ class Res2NeXt(nn.Module):
         x = self.layer2(x)
         x = self.layer3(x)
         x = self.layer4(x)
-        x = self.avgpool(x)
-        x = x.view(x.size(0), -1)
-        x = self.fc(x)
-
+        if self.include_top:
+            x = self.avgpool(x)
+            x = x.view(x.size(0), -1)
+            x = self.fc(x)
         return x
 
 
@@ -170,8 +171,13 @@ def res2next50(pretrained=False, **kwargs):
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = Res2NeXt(Bottle2neckX, layers=[3, 4, 6, 3], baseWidth=4, cardinality=8, scale=4, num_classes=1000)
-    if pretrained:
+    model = Res2NeXt(Bottle2neckX, layers=[3, 4, 6, 3], baseWidth=4,
+                     cardinality=8, scale=4, num_classes=1000, **kwargs)
+    model_file = kwargs.get('model_file', None)
+    if model_file is not None:
+        state_dict = torch.load(model_file, map_location={'cuda:0': 'cpu'})
+        model.load_state_dict(state_dict)
+    elif pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['res2next50']))
     return model
 

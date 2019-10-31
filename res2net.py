@@ -2,6 +2,7 @@ import torch.nn as nn
 import math
 import torch.utils.model_zoo as model_zoo
 import torch
+import click
 import torch.nn.functional as F
 
 __all__ = ['Res2Net', 'res2net50']
@@ -9,8 +10,7 @@ __all__ = ['Res2Net', 'res2net50']
 model_urls = {
     'res2net50_26w_4s': 'http://mc.nankai.edu.cn/projects/res2net/pretrainmodels/res2net50_26w_4s-06e79181.pth',
     'res2net50_48w_2s': 'http://mc.nankai.edu.cn/projects/res2net/pretrainmodels/res2net50_48w_2s-afed724a.pth',
-    'res2net50_14w_8s': 'res2net50_14w_8s-6527dddc.pth',
-    # 'res2net50_14w_8s': 'http://mc.nankai.edu.cn/projects/res2net/pretrainmodels/res2net50_14w_8s-6527dddc.pth',
+    'res2net50_14w_8s': 'http://mc.nankai.edu.cn/projects/res2net/pretrainmodels/res2net50_14w_8s-6527dddc.pth',
     'res2net50_26w_6s': 'http://mc.nankai.edu.cn/projects/res2net/pretrainmodels/res2net50_26w_6s-19041792.pth',
     'res2net50_26w_8s': 'http://mc.nankai.edu.cn/projects/res2net/pretrainmodels/res2net50_26w_8s-2c7c9f12.pth',
     'res2net101_26w_4s': 'http://mc.nankai.edu.cn/projects/res2net/pretrainmodels/res2net101_26w_4s-02a759a1.pth',
@@ -98,10 +98,10 @@ class Bottle2neck(nn.Module):
 
 class Res2Net(nn.Module):
 
-    def __init__(self, block, layers, baseWidth=26, scale=4, num_classes=1000, include_top=True):
+    def __init__(self, block, layers, baseWidth=26, scale=4, num_classes=1000, **kwargs):
         self.inplanes = 64
         super(Res2Net, self).__init__()
-        self.include_top = include_top
+        self.include_top = kwargs.get('include_top', True)
         self.baseWidth = baseWidth
         self.scale = scale
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
@@ -166,10 +166,7 @@ def res2net50(pretrained=False, **kwargs):
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = Res2Net(Bottle2neck, [3, 4, 6, 3], baseWidth=26, scale=4, **kwargs)
-    if pretrained:
-        model.load_state_dict(model_zoo.load_url(model_urls['res2net50_26w_4s']))
-    return model
+    return res2net50_26w_4s(pretrained=pretrained, **kwargs)
 
 
 def res2net50_26w_4s(pretrained=False, **kwargs):
@@ -178,7 +175,11 @@ def res2net50_26w_4s(pretrained=False, **kwargs):
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
     model = Res2Net(Bottle2neck, [3, 4, 6, 3], baseWidth=26, scale=4, **kwargs)
-    if pretrained:
+    model_file = kwargs.get('model_file', None)
+    if model_file is not None:
+        state_dict = torch.load(model_file, map_location={'cuda:0': 'cpu'})
+        model.load_state_dict(state_dict)
+    elif pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['res2net50_26w_4s']))
     return model
 
@@ -189,7 +190,11 @@ def res2net101_26w_4s(pretrained=False, **kwargs):
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
     model = Res2Net(Bottle2neck, [3, 4, 23, 3], baseWidth=26, scale=4, **kwargs)
-    if pretrained:
+    model_file = kwargs.get('model_file', None)
+    if model_file is not None:
+        state_dict = torch.load(model_file, map_location={'cuda:0': 'cpu'})
+        model.load_state_dict(state_dict)
+    elif pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['res2net101_26w_4s']))
     return model
 
@@ -200,7 +205,11 @@ def res2net50_26w_6s(pretrained=False, **kwargs):
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
     model = Res2Net(Bottle2neck, [3, 4, 6, 3], baseWidth=26, scale=6, **kwargs)
-    if pretrained:
+    model_file = kwargs.get('model_file', None)
+    if model_file is not None:
+        state_dict = torch.load(model_file, map_location={'cuda:0': 'cpu'})
+        model.load_state_dict(state_dict)
+    elif pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['res2net50_26w_6s']))
     return model
 
@@ -211,7 +220,11 @@ def res2net50_26w_8s(pretrained=False, **kwargs):
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
     model = Res2Net(Bottle2neck, [3, 4, 6, 3], baseWidth=26, scale=8, **kwargs)
-    if pretrained:
+    model_file = kwargs.get('model_file', None)
+    if model_file is not None:
+        state_dict = torch.load(model_file, map_location={'cuda:0': 'cpu'})
+        model.load_state_dict(state_dict)
+    elif pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['res2net50_26w_8s']))
     return model
 
@@ -222,7 +235,11 @@ def res2net50_48w_2s(pretrained=False, **kwargs):
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
     model = Res2Net(Bottle2neck, [3, 4, 6, 3], baseWidth=48, scale=2, **kwargs)
-    if pretrained:
+    model_file = kwargs.get('model_file', None)
+    if model_file is not None:
+        state_dict = torch.load(model_file, map_location={'cuda:0': 'cpu'})
+        model.load_state_dict(state_dict)
+    elif pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['res2net50_48w_2s']))
     return model
 
@@ -233,21 +250,17 @@ def res2net50_14w_8s(pretrained=False, **kwargs):
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
     model = Res2Net(Bottle2neck, [3, 4, 6, 3], baseWidth=14, scale=8, **kwargs)
-    if pretrained:
-        state_dict = torch.load(model_urls['res2net50_14w_8s'],
-                                map_location={'cuda:0': 'cpu'})
+    model_file = kwargs.get('model_file', None)
+    if model_file is not None:
+        state_dict = torch.load(model_file, map_location={'cuda:0': 'cpu'})
         model.load_state_dict(state_dict)
-        # model.load_state_dict(model_zoo.load_url(model_urls['res2net50_14w_8s']))
+    elif pretrained:
+        model.load_state_dict(model_zoo.load_url(model_urls['res2net50_14w_8s']))
     return model
 
 
 if __name__ == '__main__':
-    from pytorch2keras.converter import pytorch_to_keras
-    images = torch.rand(1, 3, 224, 224).cpu()
-    model = res2net50_14w_8s(pretrained=True, include_top=False)
-    k_model = pytorch_to_keras(model, images, [(3, None, None)],
-                               verbose=False, change_ordering=True)
-    k_model.save('r2n50k_vis_no_top.h5')
-
-    # model = model.cpu()
-    # print(model(images).size())
+    images = torch.rand(1, 3, 224, 224).cuda(0)
+    model = res2net101_26w_4s(pretrained=True)
+    model = model.cuda(0)
+    print(model(images).size())

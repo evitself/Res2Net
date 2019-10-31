@@ -17,15 +17,16 @@ def cli():
     pass
 
 
-@cli.command('parse')
+@cli.command('convert')
 @click.option('--model_name', '-n', help='model name')
 @click.option('--model_file', '-i', help='input pytorch model file')
 @click.option('--keras_model_file', '-o', help='output keras model file')
-@click.option('--include_top', '-t', is_flag=True, help='include top block')
+@click.option('--no_top', '-t', is_flag=True, help='do not include top fc block')
 @click.option('--variable_size', '-v', is_flag=True, help='variable size')
 @click.option('--change_ordering', '-c', is_flag=True, help='change channel ordering')
-def main(model_name, model_file, keras_model_file,
-         include_top, variable_size, change_ordering):
+def convert(model_name, model_file, keras_model_file,
+            no_top, variable_size, change_ordering):
+    include_top = not no_top
     print('include top: {}'.format(include_top))
     print('variable size: {}'.format(variable_size))
     print('change ordering: {}'.format(change_ordering))
@@ -42,15 +43,20 @@ def main(model_name, model_file, keras_model_file,
 
 @cli.command()
 @click.option('--keras_model', '-m', help='keras model file')
-def demo(keras_model):
+@click.option('--channels_first', is_flag=True)
+def demo(keras_model, channels_first):
+    if channels_first:
+        keras.backend.set_image_data_format('channels_first')
     model = keras.models.load_model(keras_model)
     cap = cv2.VideoCapture(1)
     while True:
         ret, frame = cap.read()
         if not ret:
             break
-        input_tensor = cv2.resize(frame, (224, 224), interpolation=cv2.INTER_LINEAR)
+        input_tensor = cv2.resize(frame, (256, 256), interpolation=cv2.INTER_LINEAR)[16:240, 16:240, ...]
         input_tensor = (input_tensor / 255.0 - [0.485, 0.456, 0.406]) / [0.229, 0.224, 0.225]
+        if channels_first:
+            input_tensor = np.transpose(input_tensor, (2, 0, 1))
         pred = model.predict(np.expand_dims(input_tensor, axis=0))
         pred = pred.squeeze()
         top_id = np.argmax(pred)

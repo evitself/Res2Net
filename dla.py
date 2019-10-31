@@ -15,7 +15,6 @@ __all__ = ['res2net_dla60']
 
 model_urls = {
     'res2net_dla60': 'res2net_dla60_4s-d88db7f9.pth',
-    # 'res2net_dla60': 'http://mc.nankai.edu.cn/projects/res2net/pretrainmodels/res2net_dla60_4s-d88db7f9.pth',
     'res2next_dla60': 'http://mc.nankai.edu.cn/projects/res2net/pretrainmodels/res2next_dla60_4s-d327927b.pth',
 
 }
@@ -269,9 +268,9 @@ class Tree(nn.Module):
 class DLA(nn.Module):
     def __init__(self, levels, channels, num_classes=1000,
                  block=Bottle2neck, residual_root=False, return_levels=False,
-                 pool_size=7, linear_root=False, include_top=True):
+                 pool_size=7, linear_root=False, **kwargs):
         super(DLA, self).__init__()
-        self.include_top = include_top
+        self.include_top = kwargs.get('include_top', True)
         self.channels = channels
         self.return_levels = return_levels
         self.num_classes = num_classes
@@ -347,7 +346,8 @@ class DLA(nn.Module):
             if self.include_top:
                 x = self.avgpool(x)
                 x = self.fc(x)
-                x = x.view(x.size(0), -1)
+                # x = x.view(x.size(0), -1)
+                # x = x.softmax(1)
 
             return x
 
@@ -374,11 +374,12 @@ def res2net_dla60(pretrained=None, **kwargs):
     model = DLA([1, 1, 1, 2, 3, 1],
                 [16, 32, 128, 256, 512, 1024],
                 block=Bottle2neck, **kwargs)
-    if pretrained:
-        # model.load_state_dict(model_zoo.load_url(model_urls['res2net_dla60']))
-        state_dict = torch.load(model_urls['res2net_dla60'],
-                                map_location={'cuda:0': 'cpu'})
+    model_file = kwargs.get('model_file', None)
+    if model_file is not None:
+        state_dict = torch.load(model_file, map_location={'cuda:0': 'cpu'})
         model.load_state_dict(state_dict)
+    elif pretrained:
+        model.load_state_dict(model_zoo.load_url(model_urls['res2net_dla60']))
     return model
 
 
@@ -387,19 +388,17 @@ def res2next_dla60(pretrained=None, **kwargs):
     model = DLA([1, 1, 1, 2, 3, 1],
                 [16, 32, 128, 256, 512, 1024],
                 block=Bottle2neckX, **kwargs)
-    if pretrained:
+    model_file = kwargs.get('model_file', None)
+    if model_file is not None:
+        state_dict = torch.load(model_file, map_location={'cuda:0': 'cpu'})
+        model.load_state_dict(state_dict)
+    elif pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['res2next_dla60']))
     return model
 
 
 if __name__ == '__main__':
-    from pytorch2keras.converter import pytorch_to_keras
-    images = torch.rand(1, 3, 224, 224).cpu()
-    model = res2net_dla60(pretrained=True, include_top=False)
-    k_model = pytorch_to_keras(model, images, [(3, None, None)],
-                               verbose=False, change_ordering=True)
-    k_model.summary()
-    k_model.save('res2net_dla60_4s_no_top.h5')
-
-    # model = model.cuda(0)
-    # print(model(images).size())
+    images = torch.rand(1, 3, 224, 224).cuda(0)
+    model = res2next_dla60(pretrained=True)
+    model = model.cuda(0)
+    print(model(images).size())
