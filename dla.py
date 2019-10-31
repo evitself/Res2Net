@@ -13,14 +13,11 @@ BatchNorm = nn.BatchNorm2d
 
 __all__ = ['res2net_dla60']
 
-
 model_urls = {
-    'res2net_dla60': 'http://mc.nankai.edu.cn/projects/res2net/pretrainmodels/res2net_dla60_4s-d88db7f9.pth',
+    'res2net_dla60': 'res2net_dla60_4s-d88db7f9.pth',
     'res2next_dla60': 'http://mc.nankai.edu.cn/projects/res2net/pretrainmodels/res2next_dla60_4s-d327927b.pth',
 
 }
-
-
 
 
 class Bottle2neck(nn.Module):
@@ -29,7 +26,7 @@ class Bottle2neck(nn.Module):
     """
     expansion = 2
 
-    def __init__(self, inplanes, planes, stride=1, dilation=1, baseWidth=28, scale = 4):
+    def __init__(self, inplanes, planes, stride=1, dilation=1, baseWidth=28, scale=4):
         """ Constructor
         Args:
             inplanes: input channel dimensionality
@@ -45,32 +42,32 @@ class Bottle2neck(nn.Module):
             stype = 'stage'
         else:
             stype = 'normal'
-        width = int(math.floor(planes * (baseWidth/128.0)))
-        self.conv1 = nn.Conv2d(inplanes, width*scale, kernel_size=1, bias=False)
-        self.bn1 = BatchNorm(width*scale)
-        
+        width = int(math.floor(planes * (baseWidth / 128.0)))
+        self.conv1 = nn.Conv2d(inplanes, width * scale, kernel_size=1, bias=False)
+        self.bn1 = BatchNorm(width * scale)
+
         if scale == 1:
-          self.nums = 1
+            self.nums = 1
         else:
-          self.nums = scale -1
+            self.nums = scale - 1
         if stype == 'stage':
-            self.pool = nn.AvgPool2d(kernel_size=3, stride = stride, padding=1)
+            self.pool = nn.AvgPool2d(kernel_size=3, stride=stride, padding=1)
         convs = []
         bns = []
         for i in range(self.nums):
-          convs.append(nn.Conv2d(width, width, kernel_size=3, stride = stride, 
-                        padding=dilation, dilation=dilation, bias=False))
-          bns.append(BatchNorm(width))
+            convs.append(nn.Conv2d(width, width, kernel_size=3, stride=stride,
+                                   padding=dilation, dilation=dilation, bias=False))
+            bns.append(BatchNorm(width))
         self.convs = nn.ModuleList(convs)
         self.bns = nn.ModuleList(bns)
 
-        self.conv3 = nn.Conv2d(width*scale, planes, kernel_size=1, bias=False)
+        self.conv3 = nn.Conv2d(width * scale, planes, kernel_size=1, bias=False)
         self.bn3 = BatchNorm(planes)
 
         self.relu = nn.ReLU(inplace=True)
         self.stype = stype
         self.scale = scale
-        self.width  = width
+        self.width = width
 
     def forward(self, x, residual=None):
         if residual is None:
@@ -82,20 +79,20 @@ class Bottle2neck(nn.Module):
 
         spx = torch.split(out, self.width, 1)
         for i in range(self.nums):
-          if i==0 or self.stype=='stage':
-            sp = spx[i]
-          else:
-            sp = sp + spx[i]
-          sp = self.convs[i](sp)
-          sp = self.relu(self.bns[i](sp))
-          if i==0:
-            out = sp
-          else:
-            out = torch.cat((out, sp), 1)
-        if self.scale != 1 and self.stype=='normal':
-          out = torch.cat((out, spx[self.nums]),1)
-        elif self.scale != 1 and self.stype=='stage':
-          out = torch.cat((out, self.pool(spx[self.nums])),1)
+            if i == 0 or self.stype == 'stage':
+                sp = spx[i]
+            else:
+                sp = sp + spx[i]
+            sp = self.convs[i](sp)
+            sp = self.relu(self.bns[i](sp))
+            if i == 0:
+                out = sp
+            else:
+                out = torch.cat((out, sp), 1)
+        if self.scale != 1 and self.stype == 'normal':
+            out = torch.cat((out, spx[self.nums]), 1)
+        elif self.scale != 1 and self.stype == 'stage':
+            out = torch.cat((out, self.pool(spx[self.nums])), 1)
 
         out = self.conv3(out)
         out = self.bn3(out)
@@ -112,7 +109,8 @@ class Bottle2neckX(nn.Module):
     """
     expansion = 2
     cardinality = 8
-    def __init__(self, inplanes, planes, stride=1, dilation=1, scale = 4):
+
+    def __init__(self, inplanes, planes, stride=1, dilation=1, scale=4):
         """ Constructor
         Args:
             inplanes: input channel dimensionality
@@ -128,33 +126,33 @@ class Bottle2neckX(nn.Module):
             stype = 'stage'
         else:
             stype = 'normal'
-        cardinality =  Bottle2neckX.cardinality
+        cardinality = Bottle2neckX.cardinality
         width = bottle_planes = planes * cardinality // 32
-        self.conv1 = nn.Conv2d(inplanes, width*scale, kernel_size=1, bias=False)
-        self.bn1 = BatchNorm(width*scale)
-        
+        self.conv1 = nn.Conv2d(inplanes, width * scale, kernel_size=1, bias=False)
+        self.bn1 = BatchNorm(width * scale)
+
         if scale == 1:
-          self.nums = 1
+            self.nums = 1
         else:
-          self.nums = scale -1
+            self.nums = scale - 1
         if stype == 'stage':
-            self.pool = nn.AvgPool2d(kernel_size=3, stride = stride, padding=1)
+            self.pool = nn.AvgPool2d(kernel_size=3, stride=stride, padding=1)
         convs = []
         bns = []
         for i in range(self.nums):
-          convs.append(nn.Conv2d(width, width, kernel_size=3, stride = stride, 
-                        padding=dilation, dilation=dilation, groups=cardinality, bias=False))
-          bns.append(BatchNorm(width))
+            convs.append(nn.Conv2d(width, width, kernel_size=3, stride=stride,
+                                   padding=dilation, dilation=dilation, groups=cardinality, bias=False))
+            bns.append(BatchNorm(width))
         self.convs = nn.ModuleList(convs)
         self.bns = nn.ModuleList(bns)
 
-        self.conv3 = nn.Conv2d(width*scale, planes, kernel_size=1, bias=False)
+        self.conv3 = nn.Conv2d(width * scale, planes, kernel_size=1, bias=False)
         self.bn3 = BatchNorm(planes)
 
         self.relu = nn.ReLU(inplace=True)
         self.stype = stype
         self.scale = scale
-        self.width  = width
+        self.width = width
 
     def forward(self, x, residual=None):
         if residual is None:
@@ -166,20 +164,20 @@ class Bottle2neckX(nn.Module):
 
         spx = torch.split(out, self.width, 1)
         for i in range(self.nums):
-          if i==0 or self.stype=='stage':
-            sp = spx[i]
-          else:
-            sp = sp + spx[i]
-          sp = self.convs[i](sp)
-          sp = self.relu(self.bns[i](sp))
-          if i==0:
-            out = sp
-          else:
-            out = torch.cat((out, sp), 1)
-        if self.scale != 1 and self.stype=='normal':
-          out = torch.cat((out, spx[self.nums]),1)
-        elif self.scale != 1 and self.stype=='stage':
-          out = torch.cat((out, self.pool(spx[self.nums])),1)
+            if i == 0 or self.stype == 'stage':
+                sp = spx[i]
+            else:
+                sp = sp + spx[i]
+            sp = self.convs[i](sp)
+            sp = self.relu(self.bns[i](sp))
+            if i == 0:
+                out = sp
+            else:
+                out = torch.cat((out, sp), 1)
+        if self.scale != 1 and self.stype == 'normal':
+            out = torch.cat((out, spx[self.nums]), 1)
+        elif self.scale != 1 and self.stype == 'stage':
+            out = torch.cat((out, self.pool(spx[self.nums])), 1)
 
         out = self.conv3(out)
         out = self.bn3(out)
@@ -188,7 +186,6 @@ class Bottle2neckX(nn.Module):
         out = self.relu(out)
 
         return out
-
 
 
 class Root(nn.Module):
@@ -271,8 +268,9 @@ class Tree(nn.Module):
 class DLA(nn.Module):
     def __init__(self, levels, channels, num_classes=1000,
                  block=Bottle2neck, residual_root=False, return_levels=False,
-                 pool_size=7, linear_root=False):
+                 pool_size=7, linear_root=False, **kwargs):
         super(DLA, self).__init__()
+        self.include_top = kwargs.get('include_top', True)
         self.channels = channels
         self.return_levels = return_levels
         self.num_classes = num_classes
@@ -345,30 +343,30 @@ class DLA(nn.Module):
         if self.return_levels:
             return y
         else:
-            x = self.avgpool(x)
-            x = self.fc(x)
-            x = x.view(x.size(0), -1)
+            if self.include_top:
+                x = self.avgpool(x)
+                x = self.fc(x)
+                # x = x.view(x.size(0), -1)
+                # x = x.softmax(1)
 
             return x
 
-    def load_pretrained_model(self, data_name, name):
-        assert data_name in dataset.__dict__, \
-            'No pretrained model for {}'.format(data_name)
-        data = dataset.__dict__[data_name]
-        fc = self.fc
-        if self.num_classes != data.classes:
-            self.fc = nn.Conv2d(
-                self.channels[-1], data.classes,
-                kernel_size=1, stride=1, padding=0, bias=True)
-        try:
-            model_url = get_model_url(data, name)
-        except KeyError:
-            raise ValueError(
-                '{} trained on {} does not exist.'.format(data.name, name))
-        self.load_state_dict(model_zoo.load_url(model_url))
-        self.fc = fc
-
-
+    # def load_pretrained_model(self, data_name, name):
+    #     assert data_name in dataset.__dict__, \
+    #         'No pretrained model for {}'.format(data_name)
+    #     data = dataset.__dict__[data_name]
+    #     fc = self.fc
+    #     if self.num_classes != data.classes:
+    #         self.fc = nn.Conv2d(
+    #             self.channels[-1], data.classes,
+    #             kernel_size=1, stride=1, padding=0, bias=True)
+    #     try:
+    #         model_url = get_model_url(data, name)
+    #     except KeyError:
+    #         raise ValueError(
+    #             '{} trained on {} does not exist.'.format(data.name, name))
+    #     self.load_state_dict(model_zoo.load_url(model_url))
+    #     self.fc = fc
 
 
 def res2net_dla60(pretrained=None, **kwargs):
@@ -376,16 +374,25 @@ def res2net_dla60(pretrained=None, **kwargs):
     model = DLA([1, 1, 1, 2, 3, 1],
                 [16, 32, 128, 256, 512, 1024],
                 block=Bottle2neck, **kwargs)
-    if pretrained:
+    model_file = kwargs.get('model_file', None)
+    if model_file is not None:
+        state_dict = torch.load(model_file, map_location={'cuda:0': 'cpu'})
+        model.load_state_dict(state_dict)
+    elif pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['res2net_dla60']))
     return model
+
 
 def res2next_dla60(pretrained=None, **kwargs):
     Bottle2neckX.expansion = 2
     model = DLA([1, 1, 1, 2, 3, 1],
                 [16, 32, 128, 256, 512, 1024],
                 block=Bottle2neckX, **kwargs)
-    if pretrained:
+    model_file = kwargs.get('model_file', None)
+    if model_file is not None:
+        state_dict = torch.load(model_file, map_location={'cuda:0': 'cpu'})
+        model.load_state_dict(state_dict)
+    elif pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['res2next_dla60']))
     return model
 
